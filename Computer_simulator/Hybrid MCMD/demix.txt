@@ -1,0 +1,43 @@
+#LAMMPS input for demixing simulation 
+#define some varibles
+variable	dt equal 0.001
+variable    	T equal 80
+variable	P equal 1
+variable 	lp equal 5.34
+variable	lx equal 5*${lp}
+#some parameters and instructions
+dimension    	3
+units       	metal
+boundary     	p p p
+atom_style	atomic
+timestep     	${dt}
+dump            d1 all atom 5000 config.dump
+#initial position
+region          SIMBOX block -${lx} ${lx} -${lx} ${lx} -${lx} ${lx}
+create_box      2 SIMBOX
+lattice         fcc ${lp} origin 0.01 0.01 0.01 orient x 1 0 0 orient y 0 1 0 orient z 0 0 1
+region          R1 block -${lx} ${lx} -${lx} ${lx} -${lx} 0
+create_atoms	1 region R1
+lattice      	fcc ${lp} origin 0.01 0.01 0.01 orient x 1 0 0 orient y 0 1 0 orient z 0 0 1
+region       	R2 block -${lx} ${lx} -${lx} ${lx} 0 ${lx}
+create_atoms	2 region R2
+#define the potential and mass
+mass      	1 39.948 
+mass      	2 39.948 
+pair_style   	lj/cut 8.5
+pair_coeff   	1 1 0.01042 3.4
+pair_coeff      2 2 0.01042 3.4
+pair_coeff      1 2 0.00942 3.4
+#minimize and initial velocity
+minimize 	1e-6 1e-6 10000 10000
+velocity     	all create $T 12345 mom yes rot yes dist gaussian
+#output format in log file
+thermo_style    custom step temp press vol ke pe etotal
+thermo		2000
+#specify NPT run
+fix             fNPT all npt temp $T $T 0.1 iso $P $P 1.0
+fix		fMC all atom/swap 1000 100 12345 $T ke no types 1 2
+run          	70000
+unfix           fNPT
+unfix		fMC
+undump		d1

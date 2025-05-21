@@ -1,0 +1,45 @@
+#LAMMPS input for surface energy calculation
+#define some varibles
+variable	T equal 5
+variable	P equal 1
+variable	dt equal 0.001
+variable	lp equal 5.34
+#some parameters
+dimension    	3
+units       	metal
+boundary     	p p p
+atom_style	atomic
+timestep     	${dt}
+dump            d1 all atom 5000 solid.config.dump
+#initial position for periodic solid
+variable	ll1 equal 8*${lp}
+variable	ll2 equal 6*${lp}
+lattice         fcc ${lp} orient x 1 0 0 orient y 0 1 0 orient z 0 0 1
+region          SOLID block -${ll1} ${ll1} -${ll1} ${ll1} -${ll2} ${ll2} units box
+create_box	1 SOLID
+create_atoms	1 region SOLID
+#define the potential and mass
+mass      	1 39.948 
+pair_style   	lj/smooth 4.2 5.2
+pair_coeff   	1 1 0.01042 3.4
+#initial velocity
+velocity     	all create ${T} 12345 mom yes rot yes dist gaussian
+#specify NPT run
+fix             fNPT all npt temp ${T} ${T} 0.1 x ${P} ${P} 1.0 y ${P} ${P} 1.0 z ${P} ${P} 1.0
+#output format in log file
+thermo_style    custom step temp press vol ke pe etotal
+thermo		1000
+#writing thermodynamic data to a file solid.dat
+variable        vtm equal temp
+variable        vpr equal press
+variable	vpe equal pe
+variable	vet equal etotal
+variable	vlx equal lx
+variable	vly equal ly
+variable	vlz equal lz
+fix             fT all ave/time 1 20000 40000 v_vtm v_vpr v_vpe v_vet v_vlx v_vly v_vlz file solid.dat
+#run simulation
+run          	40000
+#simulation over
+undump		d1
+unfix		fNPT

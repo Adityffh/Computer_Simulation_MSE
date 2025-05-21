@@ -1,0 +1,70 @@
+#LAMMPS input for melting point calculation using coexistence method 
+#define some varibles
+variable	T1 equal 75
+variable	T2 equal 140
+variable	P equal 1
+variable	dt equal 0.001
+variable	lp equal 5.4
+#some parameters
+dimension    	3
+units       	metal
+boundary     	p p p
+atom_style	atomic
+timestep     	${dt}
+dump            d1 all atom 5000 config.dump
+#initial position for half liquid and half solid
+variable	ll equal 5*${lp}
+variable	ll1 equal 10*${lp}
+region          SIMBOX block -${ll} ${ll} -${ll} ${ll} -${ll1} ${ll1} units box
+create_box      1 SIMBOX
+lattice         fcc ${lp} origin 0.01 0.01 0.01 orient x 1 0 0 orient y 0 1 0 orient z 0 0 1
+region          SOL block -${ll} ${ll} -${ll} ${ll} -${ll1} 0 units box
+create_atoms	1 region SOL
+lattice         fcc ${lp} origin 0.01 0.01 0.01 orient x 1 0 0 orient y 0 1 0 orient z 0 0 1
+region          LIQ block -${ll} ${ll} -${ll} ${ll} 0 ${ll1} units box
+create_atoms	1 region LIQ
+group           GSOL region SOL
+group		GLIQ region LIQ
+#define the potential and mass
+mass      	1 39.948
+pair_style   	lj/smooth 7.5 8.5
+pair_coeff   	1 1 0.01042 3.4
+#initial velocity
+velocity     	all create ${T1} 12345 mom yes rot yes dist gaussian
+#output format in log file
+thermo_style    custom step temp press vol ke pe etotal
+thermo		2000
+#writing thermodynamic data to a file coexist.dat
+variable        vtm equal temp
+variable        vpr equal press
+variable	vpe equal pe
+variable	vke equal ke
+fix             fT all ave/time 1 500 2000 v_vtm v_vpr v_vpe v_vke file coexist.dat
+#specify NPT run (heating and quenching) for liquid
+fix             fNPT GLIQ npt temp ${T1} ${T1} 0.1 x ${P} ${P} 1.0 y ${P} ${P} 1.0 z ${P} ${P} 1.0
+run          	10000
+unfix		fNPT
+
+fix             fNPT GLIQ npt temp ${T1} ${T2} 0.1 x ${P} ${P} 1.0 y ${P} ${P} 1.0 z ${P} ${P} 1.0
+run          	50000
+unfix		fNPT
+
+fix             fNPT GLIQ npt temp ${T2} ${T2} 0.1 x ${P} ${P} 1.0 y ${P} ${P} 1.0 z ${P} ${P} 1.0
+run          	10000
+unfix		fNPT
+
+fix             fNPT GLIQ npt temp ${T2} ${T1} 0.1 x ${P} ${P} 1.0 y ${P} ${P} 1.0 z ${P} ${P} 1.0
+run          	10000
+unfix		fNPT
+
+fix             fNPT GLIQ npt temp ${T1} ${T1} 0.1 x ${P} ${P} 1.0 y ${P} ${P} 1.0 z ${P} ${P} 1.0
+run          	10000
+unfix		fNPT
+#specify NPT run for solid 
+fix             fNPT GSOL npt temp ${T1} ${T1} 0.1 x ${P} ${P} 1.0 y ${P} ${P} 1.0 z ${P} ${P} 1.0
+run          	10000
+unfix		fNPT
+#specify NPT run for whole box
+fix             fNPT all npt temp ${T1} ${T1} 0.1 x ${P} ${P} 1.0 y ${P} ${P} 1.0 z ${P} ${P} 1.0
+run          	100000
+unfix		fNPT

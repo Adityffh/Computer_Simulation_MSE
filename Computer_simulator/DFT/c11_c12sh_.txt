@@ -1,0 +1,48 @@
+#!/bin/bash
+for (( i = 0; i <= 5; i++ ))
+do
+aeq=7.6331
+del=`echo "$i/100" | bc -l`
+del2=`echo "$del * $del" | bc -l`
+ax=`echo "$aeq + $aeq*$del" | bc -l`
+by=`echo "$aeq - $aeq*$del" | bc -l`
+cd2=`echo "$by/$ax" | bc -l`
+cz=`echo "$aeq + $aeq*$del*$del/(1-$del*$del)" | bc -l`
+cd3=`echo "$cz/$ax" | bc -l`
+cat > scf.in << EOF
+&CONTROL
+calculation = 'scf'
+prefix = 'Al'
+pseudo_dir = './'
+/
+&SYSTEM
+ibrav=  8,
+celldm(1) =$ax,
+celldm(2) =$cd2,
+celldm(3) =$cd3,
+nat=  4,
+ntyp= 1,
+ecutwfc =30,
+ecutrho=150,
+occupations='smearing',
+smearing='mp',
+degauss=0.02,
+/
+&ELECTRONS
+/
+K_POINTS automatic
+16 16 16 0 0 0
+ATOMIC_SPECIES
+Al 26.98 Al.pbe-n-kjpaw_psl.1.0.0.UPF
+ATOMIC_POSITIONS crystal
+Al 0.0 0.0 0.0
+Al 0.5 0.5 0.0
+Al 0.5 0.0 0.5
+Al 0.0 0.5 0.5
+EOF
+/opt/QE/espresso_6.5/bin/pw.x < scf.in > scf.out
+grep ! scf.out | awk '{print $5}' > ene
+grep 'volume' scf.out | awk '{print $4}' > vol
+echo $del2 > del2
+paste del2 ene vol >> c11_c12.dat
+done

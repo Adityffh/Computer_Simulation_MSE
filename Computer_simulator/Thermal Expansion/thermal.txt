@@ -1,0 +1,40 @@
+#LAMMPS input for thermal expansion 
+#define some varibles
+variable	dt equal 0.001
+variable	lp equal 5.34
+variable	P equal 1
+variable	T1 equal 1
+variable	T2 equal 40
+#some parameters and instructions
+dimension    	3
+units       	metal
+boundary     	p p p
+atom_style	atomic
+timestep     	${dt}
+dump            d1 all atom 50000 config.dump
+#initial position
+lattice      	fcc ${lp} orient x 1 0 0 orient y 0 1 0 orient z 0 0 1
+region       	mybox block 0 5 0 5 0 5
+create_box   	1 mybox
+create_atoms 	1 region mybox
+#define the potential and mass
+mass      	1 39.948 
+pair_style   	lj/smooth 7.5 8.5
+pair_coeff   	1 1 0.01542 3.4
+#initial velocity
+velocity     	all create ${T1} 12345 mom yes rot yes dist gaussian
+#specify NPT run
+fix             fNPT all npt temp ${T1} ${T2} 0.1 iso $P $P 1.0 
+#output format in log file
+thermo_style    custom step temp press vol ke pe etotal
+thermo		5000
+#writing thermodynamic data to a file npt.dat
+variable        vtm equal temp
+variable        vpr equal press
+variable	vlx equal lx
+variable	vly equal ly
+variable	vlz equal lz
+fix             fT all ave/time 1 1000 10000 v_vtm v_vpr v_vlx v_vly v_vlz file v_vs_t.dat
+#run simulation
+run          	500000
+unfix           fNPT

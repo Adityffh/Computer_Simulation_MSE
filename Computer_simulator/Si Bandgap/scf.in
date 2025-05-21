@@ -1,0 +1,24 @@
+&CONTROL
+calculation = 'scf'
+prefix = 'V'
+pseudo_dir = './'
+/
+&SYSTEM
+ibrav=  2,
+celldm(1) =7.90,
+nat=  1,
+ntyp= 1,
+ecutwfc =30,
+ecutrho=150,
+occupations='smearing',
+smearing='mp',
+degauss=0.02,
+/
+&ELECTRONS
+/
+K_POINTS automatic
+16 16 16 0 0 0
+ATOMIC_SPECIES
+V 50.94 V.pbe-spnl-kjpaw_psl.1.0.0.UPF
+ATOMIC_POSITIONS crystal
+V 0 0 0
